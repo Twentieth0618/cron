@@ -1,6 +1,5 @@
 name: Mirror All Repositories (Code & Releases)
 
-# Run on a schedule (daily at midnight UTC in this example) and allow manual triggers.
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -10,20 +9,12 @@ jobs:
   mirror-all:
     runs-on: ubuntu-latest
     steps:
-      # 1. Authenticate GitHub CLI using your target PAT.
-      - name: Setup GitHub CLI authentication
-        env:
-          GH_TOKEN: ${{ secrets.TARGET_PAT }}
-        run: |
-          gh auth login --with-token <<< "${GH_TOKEN}"
-
-      # 2. List all source repositories and mirror them to the target account.
       - name: Mirror all repositories from source to target
         env:
           # Replace these with your actual source and target usernames (or organizations)
           SOURCE_USER: Dreadrith
           TARGET_USER: Twentieth0618
-          GH_TOKEN: ${{ secrets.TARGET_PAT }}
+          TARGET_PAT: ${{ secrets.TARGET_PAT }}
         run: |
           echo "Listing repositories for source user: $SOURCE_USER"
           # List repositories with their name and clone URL (adjust --limit if you have >1000 repos)
@@ -57,7 +48,7 @@ jobs:
             cd "$tmpdir"
             echo "Pushing mirror to target repository: $target_repo"
             # The PAT is used in the URL to authenticate the push.
-            git push --mirror "https://x-access-token:${GH_TOKEN}@github.com/${target_repo}.git"
+            git push --mirror "https://x-access-token:${TARGET_PAT}@github.com/${target_repo}.git"
             cd ..
             rm -rf "$tmpdir"
 
