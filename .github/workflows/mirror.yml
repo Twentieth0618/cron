@@ -30,27 +30,24 @@ jobs:
             # Define the target repository name (assumes same repository name)
             target_repo="$TARGET_USER/$repo_name"
 
-            # 2a. Create the target repository if it doesn’t already exist.
             if gh repo view "$target_repo" >/dev/null 2>&1; then
               echo "Target repository $target_repo already exists."
             else
               echo "Creating target repository: $target_repo"
               # Adjust visibility (--public or --private) as desired.
-              gh repo create "$target_repo" --private --confirm
+              gh repo create "$target_repo" --private
             fi
 
-            # 2b. Mirror the repository’s Git data.
             tmpdir=$(mktemp -d)
             echo "Cloning source repository from $clone_url into temporary directory..."
-            git clone --mirror "$clone_url" "$tmpdir"
+            git clone --bare "$clone_url" "$tmpdir"
             cd "$tmpdir"
             echo "Pushing mirror to target repository: $target_repo"
             # The PAT is used in the URL to authenticate the push.
-            git push --mirror "https://x-access-token:${TARGET_PAT}@github.com/${target_repo}.git"
+            git push --mirror "https://github.com/${target_repo}.git"
             cd ..
             rm -rf "$tmpdir"
 
-            # 2c. Mirror GitHub Releases (if any).
             echo "Mirroring releases for $repo_name"
             # List release tags (adjust --limit if needed)
             releases=$(gh release list -R "$SOURCE_USER/$repo_name" --limit 100 --json tagName --jq '.[].tagName')
