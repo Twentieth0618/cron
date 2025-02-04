@@ -43,8 +43,7 @@ jobs:
             git clone --bare "$clone_url" "$tmpdir"
             cd "$tmpdir"
             echo "Pushing mirror to target repository: $target_repo"
-            # The PAT is used in the URL to authenticate the push.
-            git push --mirror "https://github.com/${target_repo}.git"
+            git push --mirror "https://x-access-token:${GH_TOKEN}@github.com/${target_repo}.git"
             cd ..
             rm -rf "$tmpdir"
 
