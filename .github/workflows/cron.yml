@@ -15,7 +15,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.TARGET_PAT }}
         run: |
-          echo "$GH_TOKEN" | gh auth login --with-token
+          gh auth login --with-token <<< "${GH_TOKEN}"
 
       # 2. List all source repositories and mirror them to the target account.
       - name: Mirror all repositories from source to target
