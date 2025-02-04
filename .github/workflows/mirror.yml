@@ -16,7 +16,7 @@ jobs:
         run: |
           echo "Listing repositories for source user: $SOURCE_USER"
           # List repositories with their name and clone URL (adjust --limit if you have >1000 repos)
-          repos=$(gh repo list "$SOURCE_USER" --limit 1000 --json name,cloneUrl --jq '.[] | "\(.name) \(.cloneUrl)"')
+          repos=$(gh repo list "$SOURCE_USER" --limit 1000 --json name,url --jq '.[] | "\(.name) \(.url)"')
           echo "Found repositories:"
           echo "$repos"
           
