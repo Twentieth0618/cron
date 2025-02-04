@@ -1,5 +1,4 @@
-name: Mirror All Repositories (Code & Releases)
-
+name: Mirror All Repositories
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -9,12 +8,11 @@ jobs:
   mirror-all:
     runs-on: ubuntu-latest
     steps:
-      - name: Mirror all repositories from source to target
+      - name: Mirror all repositories
         env:
-          # Replace these with your actual source and target usernames (or organizations)
           SOURCE_USER: Dreadrith
           TARGET_USER: Twentieth0618
-          TARGET_PAT: ${{ secrets.TARGET_PAT }}
+          GH_TOKEN: ${{ secrets.TARGET_PAT }}
         run: |
           echo "Listing repositories for source user: $SOURCE_USER"
           # List repositories with their name and clone URL (adjust --limit if you have >1000 repos)
