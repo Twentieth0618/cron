@@ -1,0 +1,82 @@
+name: Mirror All Repositories (Code & Releases)
+
+# Run on a schedule (daily at midnight UTC in this example) and allow manual triggers.
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  mirror-all:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Authenticate GitHub CLI using your target PAT.
+      - name: Setup GitHub CLI authentication
+        env:
+          GH_TOKEN: ${{ secrets.TARGET_PAT }}
+        run: |
+          echo "$GH_TOKEN" | gh auth login --with-token
+
+      # 2. List all source repositories and mirror them to the target account.
+      - name: Mirror all repositories from source to target
+        env:
+          # Replace these with your actual source and target usernames (or organizations)
+          SOURCE_USER: Dreadrith
+          TARGET_USER: Twentieth0618
+          GH_TOKEN: ${{ secrets.TARGET_PAT }}
+        run: |
+          echo "Listing repositories for source user: $SOURCE_USER"
+          # List repositories with their name and clone URL (adjust --limit if you have >1000 repos)
+          repos=$(gh repo list "$SOURCE_USER" --limit 1000 --json name,cloneUrl --jq '.[] | "\(.name) \(.cloneUrl)"')
+          echo "Found repositories:"
+          echo "$repos"
+          
+          # Loop through each repository from the source user
+          while IFS= read -r line; do
+            repo_name=$(echo "$line" | awk '{print $1}')
+            clone_url=$(echo "$line" | awk '{print $2}')
+            echo "------------------------------------------------------------"
+            echo "Processing repository: $repo_name"
+            
+            # Define the target repository name (assumes same repository name)
+            target_repo="$TARGET_USER/$repo_name"
+
+            # 2a. Create the target repository if it doesn’t already exist.
+            if gh repo view "$target_repo" >/dev/null 2>&1; then
+              echo "Target repository $target_repo already exists."
+            else
+              echo "Creating target repository: $target_repo"
+              # Adjust visibility (--public or --private) as desired.
+              gh repo create "$target_repo" --private --confirm
+            fi
+
+            # 2b. Mirror the repository’s Git data.
+            tmpdir=$(mktemp -d)
+            echo "Cloning source repository from $clone_url into temporary directory..."
+            git clone --mirror "$clone_url" "$tmpdir"
+            cd "$tmpdir"
+            echo "Pushing mirror to target repository: $target_repo"
+            # The PAT is used in the URL to authenticate the push.
+            git push --mirror "https://x-access-token:${GH_TOKEN}@github.com/${target_repo}.git"
+            cd ..
+            rm -rf "$tmpdir"
+
+            # 2c. Mirror GitHub Releases (if any).
+            echo "Mirroring releases for $repo_name"
+            # List release tags (adjust --limit if needed)
+            releases=$(gh release list -R "$SOURCE_USER/$repo_name" --limit 100 --json tagName --jq '.[].tagName')
+            for tag in $releases; do
+              echo "Checking release for tag: $tag"
+              if ! gh release view "$tag" -R "$target_repo" > /dev/null 2>&1; then
+                echo "Creating release for tag: $tag"
+                # Retrieve release details (title and body) from the source.
+                title=$(gh release view "$tag" -R "$SOURCE_USER/$repo_name" --json name --jq '.name')
+                body=$(gh release view "$tag" -R "$SOURCE_USER/$repo_name" --json body --jq '.body')
+                gh release create "$tag" -R "$target_repo" -t "$tag" -n "$body" --title "$title"
+              else
+                echo "Release for tag: $tag already exists in target; skipping."
+              fi
+            done
+
+            echo "Finished processing repository: $repo_name"
+          done <<< "$repos"
